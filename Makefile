@@ -1,10 +1,14 @@
 .PHONY: build run sh clean help
 
+VER = latest
 NAME = dovecot
-IMAGE = docker.patrickdk.com/dswett/$(NAME)
+IMAGE = docker.patrickdk.com/dswett/$(NAME):$(VER)
 
 build: ## Build the container image (default).
 	docker build -t $(IMAGE) .
+
+push:
+	docker push ${IMAGE}
 
 run: ## Run a container from the image.
 	docker run -d --init --name $(NAME) --read-only --restart=always $(IMAGE)
