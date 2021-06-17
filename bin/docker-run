@@ -1,0 +1,34 @@
+#!/bin/bash
+
+if [ ! -z "$POOLMON_INTERVAL" ] ; then
+  poolmon="--logfile=/dev/stdout --interval=${POOLMON_INTERVAL} "
+  if [ ! -z "$POOLMON_CREDFILE" ] ; then
+    poolmon="${poolmon} --credfile=${POOLMON_CREDFILE}"
+  fi
+  if [ ! -z "$POOLMON_TIMEOUT" ] ; then
+    poolmon="${poolmon} --timeout=${POOLMON_TIMEOUT}"
+  fi
+  if [ ! -z "$POOLMON_DOVEADM" ] ; then
+    poolmon="${poolmon} --socket=${POOLMON_DOVEADM}"
+  fi
+  if [ ! -z "$POOLMON_LMTP_FROM" ] ; then
+    poolmon="${poolmon} --lmtp-from=${POOLMON_LMTP_FROM}"
+  fi
+  if [ ! -z "$POOLMON_LMTP_TO" ] ; then
+    poolmon="${poolmon} --lmtp-to=${POOLMON_LMTP_TO}"
+  fi
+  /usr/local/bin/poolmon ${poolmon}
+fi
+/usr/sbin/dovecot
+#wait $(cat /var/run/dovecot/master.pid) $(cat /var/run/poolmon.pid)
+sleep 15
+while [ -e /var/run/dovecot/master.pid ] && [ -e /var/run/poolmon.pid ]; do
+  if [ ! -d /proc/$(tr -d " \t" < /var/run/dovecot/master.pid) ]; then
+    exit 1
+  fi
+  if [ ! -d /proc/$(tr -d " \t" < /var/run/poolmon.pid) ]; then
+    exit 1
+  fi
+  sleep 10
+done
+exit 0

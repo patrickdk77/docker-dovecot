@@ -1,4 +1,6 @@
-FROM alpine:3.13 as alpine_builder
+ARG BUILD_FROM=alpine:latest
+
+FROM ${BUILD_FROM} as alpine_builder
 COPY .abuild/ /etc/apk/keys/
 RUN apk --no-cache add alpine-sdk coreutils cmake sudo bash \
  && adduser -G abuild -g "Alpine Package Builder" -s /bin/bash -D -h /home/builder builder \
@@ -43,11 +45,12 @@ RUN cd /home/builder/package \
  && abuild -r
 
 
-FROM alpine:3.13
+FROM ${BUILD_FROM}
 
 COPY .abuild/patrickdk@patrickdk.com-609e9f0e.rsa.pub /etc/apk/keys/
 COPY --from=build_dovecot /packages/builder/x86_64/dovecot*.apk /root/
 COPY --from=build_xapian /packages/builder/x86_64/dovecot*.apk /root/
+COPY bin/ /usr/local/bin/
 
 RUN cd /root/ \
  && apk upgrade --no-cache \
@@ -55,7 +58,7 @@ RUN cd /root/ \
  && apk add --no-cache dovecot-gssapi-2.*.apk dovecot-mysql-2.*.apk dovecot-pigeonhole-plugin-2.*.apk dovecot-sql-2.*.apk \
     dovecot-2.*.apk dovecot-fts-lucene-2.*.apk dovecot-lmtpd-2.*.apk dovecot-pop3d-2.*.apk dovecot-submissiond-2.*.apk \
     dovecot-fts-xapian-1.*.apk \
- && apk add --no-cache ca-certificates tzdata \
+ && apk add --no-cache ca-certificates tzdata bash perl perl-io-socket-inet6 perl-io-socket-ssl \
  && mkdir /run/dovecot \
  && addgroup -g 30000 vmail \
  && adduser -Ds /bin/false -u 30000 -G vmail -h /var/mail vmail \
@@ -77,5 +80,6 @@ EXPOSE 24/tcp 110/tcp 143/tcp 993/tcp 995/tcp 4190/tcp
 
 #VOLUME /var/mail /run/dovecot /tmp /var/lib/dovecot
 
-CMD ["/usr/sbin/dovecot", "-F"]
+CMD ["/usr/local/bin/docker-run"]
+#CMD ["/usr/sbin/dovecot", "-F"]
 #HEALTHCHECK CMD ["sh", "-c", "echo PING | nc 127.0.0.1 5001 | grep -q PONG"]

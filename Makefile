@@ -5,7 +5,10 @@ NAME = dovecot
 IMAGE = docker.patrickdk.com/dswett/$(NAME):$(VER)
 
 build: ## Build the container image (default).
-	docker build -t $(IMAGE) .
+	docker build --pull -t $(IMAGE) .
+
+buildx: ## Build the container image (default).
+	docker buildx build --pull --platform linux/amd64,linux/arm64,linux/arm/v7 --push -t $(IMAGE) .
 
 push:
 	docker push ${IMAGE}
