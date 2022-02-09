@@ -1,5 +1,14 @@
 #!/bin/bash
 
+if [ ! -z "${IPS:-}" ]; then
+  for i in $IPS; do
+    ip addr add $i/32 dev lo
+  done
+fi
+
+/usr/sbin/dovecot -F &
+BACKGROUND_TASKS="$!"
+
 if [ ! -z "$POOLMON_INTERVAL" ] ; then
   poolmon="--logfile=/dev/stdout --interval=${POOLMON_INTERVAL} "
   if [ ! -z "$POOLMON_CREDFILE" ] ; then
@@ -18,17 +27,28 @@ if [ ! -z "$POOLMON_INTERVAL" ] ; then
     poolmon="${poolmon} --lmtp-to=${POOLMON_LMTP_TO}"
   fi
   /usr/local/bin/poolmon ${poolmon}
+  sleep 4
+  BACKGROUND_TASKS="${BACKGROUND_TASKS} $!"
 fi
-/usr/sbin/dovecot
 #wait $(cat /var/run/dovecot/master.pid) $(cat /var/run/poolmon.pid)
 sleep 15
-while [ -e /var/run/dovecot/master.pid ] && [ -e /var/run/poolmon.pid ]; do
-  if [ ! -d /proc/$(tr -d " \t" < /var/run/dovecot/master.pid) ]; then
-    exit 1
-  fi
-  if [ ! -d /proc/$(tr -d " \t" < /var/run/poolmon.pid) ]; then
-    exit 1
-  fi
-  sleep 10
+#while [ -e /var/run/dovecot/master.pid ] && [ -e /var/run/poolmon.pid ]; do
+#  if [ ! -d /proc/$(tr -d " \t" < /var/run/dovecot/master.pid) ]; then
+#    exit 1
+#  fi
+#  if [ ! -d /proc/$(tr -d " \t" < /var/run/poolmon.pid) ]; then
+#    exit 1
+#  fi
+#  sleep 10
+#done
+#exit 0
+while true; do
+        for bg_task in ${BACKGROUND_TASKS}; do
+                if ! kill -0 ${bg_task}; then
+                        echo "Worker ${bg_task} died, stopping container waiting for respawn..."
+                        kill -TERM 1
+                        exit 1
+                fi
+                sleep 10
+        done
 done
-exit 0

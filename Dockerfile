@@ -1,4 +1,4 @@
-ARG BUILD_FROM=alpine:latest
+ARG BUILD_FROM=alpine:3.15
 
 FROM ${BUILD_FROM} as alpine_builder
 COPY .abuild/ /etc/apk/keys/
@@ -13,8 +13,25 @@ RUN apk --no-cache add alpine-sdk coreutils cmake sudo bash \
  && mkdir -p /home/builder/.abuild /home/builder/packages \
  && chown -R builder:abuild /home/builder/packages
 
+FROM alpine_builder as build_stemmer
+#COPY --chown=builder:abuild libstemmer/ /home/builder/package/
+COPY --chown=builder:abuild snowball/ /home/builder/package/
+
+USER builder
+
+RUN cd /home/builder/package \
+ && export RSA_PRIVATE_KEY_NAME=patrickdk@patrickdk.com-609e9f0e.rsa \
+ && export PACKAGER_PRIVKEY=//etc/apk/keys/${RSA_PRIVATE_KEY_NAME} \
+ && export REPODEST=/packages \
+ && abuild-apk update \
+ && abuild -r
+
 FROM alpine_builder as build_dovecot
+COPY --from=build_stemmer /packages/builder/*/libstemmer*.apk /tmp/
 COPY --chown=builder:abuild dovecot/ /home/builder/package/
+
+RUN cd /tmp/ \
+  && apk add --no-cache libstemmer*.apk
 
 USER builder
 
@@ -26,14 +43,13 @@ RUN cd /home/builder/package \
  && abuild -r
 
 FROM alpine_builder as build_xapian
-COPY --from=build_dovecot /packages/builder/x86_64/dovecot*.apk /tmp/
+COPY --from=build_stemmer /packages/builder/*/libstemmer*.apk /tmp/
+COPY --from=build_dovecot /packages/builder/*/dovecot*.apk /tmp/
 
 COPY --chown=builder:abuild dovecot-fts-xapian/ /home/builder/package/
 
 RUN cd /tmp/ \
- && apk add --no-cache dovecot-gssapi-2.*.apk dovecot-mysql-2.*.apk dovecot-pigeonhole-plugin-2.*.apk dovecot-sql-2.*.apk \
-    dovecot-2.*.apk dovecot-fts-lucene-2.*.apk dovecot-lmtpd-2.*.apk dovecot-pop3d-2.*.apk dovecot-submissiond-2.*.apk \
-    dovecot-dev-2.*.apk
+ && apk add --no-cache dovecot*.apk dovecot-dev*.apk libstemmer*.apk
 
 USER builder
 
@@ -48,16 +64,18 @@ RUN cd /home/builder/package \
 FROM ${BUILD_FROM}
 
 COPY .abuild/patrickdk@patrickdk.com-609e9f0e.rsa.pub /etc/apk/keys/
-COPY --from=build_dovecot /packages/builder/x86_64/dovecot*.apk /root/
-COPY --from=build_xapian /packages/builder/x86_64/dovecot*.apk /root/
+COPY --from=build_stemmer /packages/builder/*/libstemmer*.apk /root/
+COPY --from=build_dovecot /packages/builder/*/dovecot*.apk /root/
+COPY --from=build_xapian /packages/builder/*/dovecot*.apk /root/
 COPY bin/ /usr/local/bin/
 
 RUN cd /root/ \
  && apk upgrade --no-cache \
  && ls -la /root/ \
- && apk add --no-cache dovecot-gssapi-2.*.apk dovecot-mysql-2.*.apk dovecot-pigeonhole-plugin-2.*.apk dovecot-sql-2.*.apk \
-    dovecot-2.*.apk dovecot-fts-lucene-2.*.apk dovecot-lmtpd-2.*.apk dovecot-pop3d-2.*.apk dovecot-submissiond-2.*.apk \
-    dovecot-fts-xapian-1.*.apk \
+ && apk add --no-cache dovecot-gssapi*.apk dovecot-mysql*.apk dovecot-pigeonhole-plugin-2*.apk dovecot-sql*.apk \
+    dovecot-2*.apk dovecot-fts*.apk dovecot-lmtpd*.apk dovecot-pop3d*.apk dovecot-submissiond*.apk libstemmer-2*.apk \
+# && ln -s /usr/lib/libstemmer.so.2.1.0 /usr/lib/libstemmer.so.2.1 \
+# && ln -s /usr/lib/libstemmer.so.2.1.0 /usr/lib/libstemmer.so.2 \
  && apk add --no-cache ca-certificates tzdata bash perl perl-io-socket-inet6 perl-io-socket-ssl \
  && mkdir /run/dovecot \
  && addgroup -g 30000 vmail \
