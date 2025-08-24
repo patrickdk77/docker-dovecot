@@ -1,14 +1,20 @@
 .PHONY: build run sh clean help
 
+TAG := $(shell git describe --tags --abbrev=0)
 VER = latest
 NAME = dovecot
 IMAGE = docker.patrickdk.com/dswett/$(NAME):$(VER)
+#IMAGETAG = docker.patrickdk.com/dswett/$(NAME):$(TAG)
+BUILD_DATE = $(shell date -u +'%Y-%m-%dT%H:%M:%Sz')
+
+all: buildx
 
 build: ## Build the container image (default).
 	docker build --no-cache --pull -t $(IMAGE) .
 
 buildx: ## Build the container image (default).
-	docker buildx build --pull --platform linux/amd64,linux/arm64 --push -t $(IMAGE) .
+	docker buildx build --pull --platform linux/amd64,linux/arm64 --build-arg "BUILD_DATE=$(BUILD_DATE)" --build-arg "BUILD_VERSION=$(TAG)" --push -t $(IMAGE) .
+	#docker buildx build --pull --platform linux/amd64,linux/arm64 --build-arg "BUILD_DATE=$(BUILD_DATE)" --build-arg "BUILD_VERSION=$(TAG)" --push -t $(IMAGETAG) .
 
 push:
 	docker push ${IMAGE}
