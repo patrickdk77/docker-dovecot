@@ -1,29 +1,33 @@
 .PHONY: build run sh clean help
 
+SHORT_SHA1 := $(shell git rev-parse --short HEAD)
 TAG := $(shell git describe --tags --abbrev=0)
-VER = latest
+ORIGIN := $(shell git remote get-url origin)
 NAME = dovecot
-IMAGE = docker.patrickdk.com/dswett/$(NAME):$(VER)
-#IMAGETAG = docker.patrickdk.com/dswett/$(NAME):$(TAG)
+PUBLIC_REPO := patrickdk/docker-dovecot
+DOCKER_REPO := docker.patrickdk.com/dswett/$(NAME)
+SOURCE_COMMIT_SHORT := $(SHORT_SHA1)
 BUILD_DATE = $(shell date -u +'%Y-%m-%dT%H:%M:%Sz')
 
 all: buildx
 
 build: ## Build the container image (default).
-	docker build --no-cache --pull -t $(IMAGE) .
+	docker build --no-cache --pull -t $(DOCKER_REPO) .
 
 buildx: ## Build the container image (default).
-	docker buildx build --pull --platform linux/amd64,linux/arm64 --build-arg "BUILD_DATE=$(BUILD_DATE)" --build-arg "BUILD_VERSION=$(TAG)" --push -t $(IMAGE) .
-	#docker buildx build --pull --platform linux/amd64,linux/arm64 --build-arg "BUILD_DATE=$(BUILD_DATE)" --build-arg "BUILD_VERSION=$(TAG)" --push -t $(IMAGETAG) .
+	docker buildx build --pull --platform linux/amd64,linux/arm64 --build-arg "BUILD_DATE=$(BUILD_DATE)" --build-arg "BUILD_VERSION=$(TAG)" --build-arg "BUILD_REF=$(SOURCE_COMMIT_SHORT)" --build-arg "BUILD_ORIGIN=$(ORIGIN)" --push -t $(DOCKER_REPO):$(TAG) .
+	docker buildx build --pull --platform linux/amd64,linux/arm64 --build-arg "BUILD_DATE=$(BUILD_DATE)" --build-arg "BUILD_VERSION=$(TAG)" --build-arg "BUILD_REF=$(SOURCE_COMMIT_SHORT)" --build-arg "BUILD_ORIGIN=$(ORIGIN)" --push -t $(DOCKER_REPO):latest .
+	#docker buildx build --pull --platform linux/amd64,linux/arm64 --build-arg "BUILD_DATE=$(BUILD_DATE)" --build-arg "BUILD_VERSION=$(TAG)" --build-arg "BUILD_REF=$(SOURCE_COMMIT_SHORT)" --build-arg "BUILD_ORIGIN=$(ORIGIN)" --push -t $(PUBLIC_REPO):$(TAG) .
+	#docker buildx build --pull --platform linux/amd64,linux/arm64 --build-arg "BUILD_DATE=$(BUILD_DATE)" --build-arg "BUILD_VERSION=$(TAG)" --build-arg "BUILD_REF=$(SOURCE_COMMIT_SHORT)" --build-arg "BUILD_ORIGIN=$(ORIGIN)" --push -t $(PUBLIC_REPO):latest .
 
 push:
-	docker push ${IMAGE}
+	docker push ${DOCKER_REPO}
 
 run: ## Run a container from the image.
-	docker run -d --init --name $(NAME) --read-only --restart=always $(IMAGE)
+	docker run -d --init --name $(NAME) --read-only --restart=always $(DOCKER_REPO)
 
 sh: ## Run a shell instead of the service for inspection, deletes the container when you leave it.
-	docker run -ti --rm --init --name $(NAME) --read-only $(IMAGE) /bin/ash
+	docker run -ti --rm --init --name $(NAME) --read-only $(DOCKER_REPO) /bin/ash
 
 clean: ## Stops and removes the running container.
 	docker stop $(NAME)

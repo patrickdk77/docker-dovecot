@@ -133,3 +133,22 @@ EXPOSE 24/tcp 110/tcp 143/tcp 993/tcp 995/tcp 4190/tcp
 CMD ["/usr/local/bin/docker-run"]
 #CMD ["/usr/sbin/dovecot", "-F"]
 #HEALTHCHECK CMD ["sh", "-c", "echo PING | nc 127.0.0.1 5001 | grep -q PONG"]
+
+ARG BUILD_DATE BUILD_REF BUILD_VERSION
+LABEL maintainer="Patrick Domack (patrickdk@patrickdk.com)" \
+  Description="Lightweight container for Dovecot based on Alpine Linux." \
+  org.label-schema.schema-version="1.0" \
+  org.label-schema.build-date="${BUILD_DATE}" \
+  org.label-schema.name="docker-dovecot" \
+  org.label-schema.description="Dovecot alpine base image" \
+  org.label-schema.url="https://github.com/patrickdk77/docker-dovecot/" \
+  org.label-schema.usage="https://github.com/patrickdk77/docker-dovecot/tree/master/README.md" \
+  org.label-schema.vcs-url="https://github.com/patrickdk77/docker-dovecot" \
+  org.label-schema.vcs-ref="${BUILD_REF}" \
+  org.label-schema.version="${BUILD_VERSION}"
+  org.opencontainers.image.authors="Patrick Domack (patrickdk@patrickdk.com)" \
+  org.opencontainers.image.created="${BUILD_DATE}" \
+  org.opencontainers.image.title="docker-dovecot" \
+  org.opencontainers.image.description="Dovecot ubuntu image" \
+  org.opencontainers.image.version="${BUILD_VERSION}" \
+  version="${BUILD_VERSION}"
