@@ -58,12 +58,12 @@ while true; do
                 	fi
                 	sleep 10
 		done
-		if [ -e "$TLS_CERT" ]; then
-			TLS_NEW=$(sha1sum $TLS_CERT)
-			if [ "$TLS" != "$TLS_NEW" ]; then
-				/usr/sbin/dovecot reload
-				TLS="$TLS_NEW"
-			fi
-		fi
         done
+	if [ -e "$TLS_CERT" ]; then
+		TLS_NEW=$(sha1sum $TLS_CERT)
+		if [ "$TLS" != "$TLS_NEW" ]; then
+			/usr/sbin/dovecot reload
+			TLS="$TLS_NEW"
+		fi
+	fi
 done
