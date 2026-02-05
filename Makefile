@@ -1,4 +1,4 @@
-.PHONY: build run sh clean help
+.PHONY: push buildx build run sh clean help
 
 SHORT_SHA1 := $(shell git rev-parse --short HEAD)
 TAG := $(shell git describe --tags --abbrev=0)
@@ -16,7 +16,11 @@ build: ## Build the container image (default).
 
 buildx: ## Build the container image (default).
 	docker buildx build --pull --platform linux/amd64,linux/arm64 --build-arg "BUILD_DATE=$(BUILD_DATE)" --build-arg "BUILD_VERSION=$(TAG)" --build-arg "BUILD_REF=$(SOURCE_COMMIT_SHORT)" --build-arg "BUILD_ORIGIN=$(ORIGIN)" --push -t $(DOCKER_REPO):$(TAG) .
-	docker buildx build --pull --platform linux/amd64,linux/arm64 --build-arg "BUILD_DATE=$(BUILD_DATE)" --build-arg "BUILD_VERSION=$(TAG)" --build-arg "BUILD_REF=$(SOURCE_COMMIT_SHORT)" --build-arg "BUILD_ORIGIN=$(ORIGIN)" --push -t $(DOCKER_REPO):latest .
+	skopeo copy --all docker://$(DOCKER_REPO):$(TAG) docker://$(DOCKER_REPO):latest
+	skopeo copy --all docker://$(DOCKER_REPO):$(TAG) docker://$(PUBLIC_REPO):$(TAG)
+	skopeo copy --all docker://$(DOCKER_REPO):$(TAG) docker://$(PUBLIC_REPO):latest
+	
+	#docker buildx build --pull --platform linux/amd64,linux/arm64 --build-arg "BUILD_DATE=$(BUILD_DATE)" --build-arg "BUILD_VERSION=$(TAG)" --build-arg "BUILD_REF=$(SOURCE_COMMIT_SHORT)" --build-arg "BUILD_ORIGIN=$(ORIGIN)" --push -t $(DOCKER_REPO):latest .
 	#docker buildx build --pull --platform linux/amd64,linux/arm64 --build-arg "BUILD_DATE=$(BUILD_DATE)" --build-arg "BUILD_VERSION=$(TAG)" --build-arg "BUILD_REF=$(SOURCE_COMMIT_SHORT)" --build-arg "BUILD_ORIGIN=$(ORIGIN)" --push -t $(PUBLIC_REPO):$(TAG) .
 	#docker buildx build --pull --platform linux/amd64,linux/arm64 --build-arg "BUILD_DATE=$(BUILD_DATE)" --build-arg "BUILD_VERSION=$(TAG)" --build-arg "BUILD_REF=$(SOURCE_COMMIT_SHORT)" --build-arg "BUILD_ORIGIN=$(ORIGIN)" --push -t $(PUBLIC_REPO):latest .
 

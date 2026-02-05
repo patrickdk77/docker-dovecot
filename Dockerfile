@@ -1,6 +1,6 @@
 ARG BUILD_FROM=alpine:3.21
 
-FROM ${BUILD_FROM} as alpine_builder
+FROM ${BUILD_FROM} AS alpine_builder
 COPY .abuild/ /etc/apk/keys/
 RUN apk --no-cache add alpine-sdk coreutils cmake sudo bash \
  && adduser -G abuild -g "Alpine Package Builder" -s /bin/bash -D -h /home/builder builder \
@@ -13,7 +13,7 @@ RUN apk --no-cache add alpine-sdk coreutils cmake sudo bash \
  && mkdir -p /home/builder/.abuild /home/builder/packages \
  && chown -R builder:abuild /home/builder/packages
 
-#FROM alpine_builder as build_stemmer
+#FROM alpine_builder AS build_stemmer
 ##COPY --chown=builder:abuild libstemmer/ /home/builder/package/
 #COPY --chown=builder:abuild snowball/ /home/builder/package/
 #USER builder
@@ -24,7 +24,7 @@ RUN apk --no-cache add alpine-sdk coreutils cmake sudo bash \
 # && abuild-apk update \
 # && abuild -r
 
-FROM alpine_builder as build_zstd
+FROM alpine_builder AS build_zstd
 COPY --chown=builder:abuild zstd/ /home/builder/package/
 USER builder
 RUN  cd /home/builder/package \
@@ -34,7 +34,7 @@ RUN  cd /home/builder/package \
  && abuild-apk update \
  && abuild -r
 
-FROM alpine_builder as build_dovecot
+FROM alpine_builder AS build_dovecot
 #COPY --from=build_stemmer /packages/builder/*/libstemmer*.apk /tmp/
 COPY --from=build_zstd /packages/builder/*/zstd*.apk /tmp/
 COPY --chown=builder:abuild dovecot/ /home/builder/package/
@@ -48,7 +48,7 @@ RUN  cd /home/builder/package \
  && abuild-apk update \
  && abuild -r
 
-FROM alpine_builder as build_xapian
+FROM alpine_builder AS build_xapian
 #COPY --from=build_stemmer /packages/builder/*/libstemmer*.apk /tmp/
 COPY --from=build_zstd /packages/builder/*/zstd*.apk /tmp/
 COPY --from=build_dovecot /packages/builder/*/dovecot*.apk /tmp/
@@ -63,7 +63,7 @@ RUN cd /home/builder/package \
  && abuild-apk update \
  && abuild -r
 
-FROM alpine_builder as build_flatcurve
+FROM alpine_builder AS build_flatcurve
 #COPY --from=build_stemmer /packages/builder/*/libstemmer*.apk /tmp/
 COPY --from=build_zstd /packages/builder/*/zstd*.apk /tmp/
 COPY --from=build_dovecot /packages/builder/*/dovecot*.apk /tmp/
@@ -78,7 +78,7 @@ RUN cd /home/builder/package \
  && abuild-apk update \
  && abuild -r
 
-FROM ${BUILD_FROM} as build_packages
+FROM ${BUILD_FROM} AS build_packages
 #COPY --from=build_stemmer /packages/builder/*/libstemmer*.apk /packages/
 COPY --from=build_zstd /packages/builder/*/zstd-lib*.apk /packages/
 COPY --from=build_dovecot /packages/builder/*/dovecot*.apk /packages/
@@ -113,6 +113,7 @@ RUN \
  && adduser -Ds /bin/false -u 30000 -G vmail -h /var/mail vmail \
  && sed -i -e's|^!include|#!include|' /etc/dovecot/conf.d/*.conf \
  && sed -i -e 's|^#!/usr/bin/env bash$|#!/bin/sh|' /usr/libexec/dovecot/health-check.sh \
+ && printf '[client]\ndefault-character-set = latin1\nssl-mode = DISABLED\n\n[client-mariadb]\nssl-verify-server-cert = false\ndisable-ssl\n\n' >> /etc/my.cnf \
  && cp -a /tmp/src/* /etc/dovecot/conf.d/
 
 #COPY src /etc/dovecot/conf.d
@@ -149,6 +150,6 @@ LABEL maintainer="Patrick Domack (patrickdk@patrickdk.com)" \
   org.opencontainers.image.authors="Patrick Domack (patrickdk@patrickdk.com)" \
   org.opencontainers.image.created="${BUILD_DATE}" \
   org.opencontainers.image.title="docker-dovecot" \
-  org.opencontainers.image.description="Dovecot ubuntu image" \
+  org.opencontainers.image.description="Dovecot alpine image" \
   org.opencontainers.image.version="${BUILD_VERSION}" \
   version="${BUILD_VERSION}"
