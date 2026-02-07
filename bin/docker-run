@@ -6,10 +6,9 @@ if [ ! -z "${IPS:-}" ]; then
   done
 fi
 
-TLS_CERT="${TLS_CERT:-/etc/tls/tls.crt}"
-TLS=""
+TLS_CERT="${TLS_CERT:-/etc/tls}"
 if [ -e "$TLS_CERT" ]; then
-  TLS=$(sha1sum $TLS_CERT)
+  find -L ${TLS_CERT} -type f -print0 | xargs -0 sha1sum > /tmp/tls.hash
 fi
 
 /usr/sbin/dovecot -F &
@@ -49,7 +48,7 @@ sleep 15
 #done
 #exit 0
 while true; do
-	for i in $(seq 1 100); do
+	for i in $(seq 1 1000); do
         	for bg_task in ${BACKGROUND_TASKS}; do
                 	if ! kill -0 ${bg_task}; then
                         	echo "Worker ${bg_task} died, stopping container waiting for respawn..."
@@ -59,11 +58,15 @@ while true; do
                 	sleep 10
 		done
         done
-	if [ -e "$TLS_CERT" ]; then
-		TLS_NEW=$(sha1sum $TLS_CERT)
-		if [ "$TLS" != "$TLS_NEW" ]; then
+        if [ -e "/tmp/tls.hash" ]; then
+		sha1sum -c /tmp/tls.hash
+		if [ $? -ne 0 ]; then
+			find -L ${TLS_CERT} -type f -print0 | xargs -0 sha1sum > /tmp/tls.hash
 			/usr/sbin/dovecot reload
-			TLS="$TLS_NEW"
+		fi
+	else
+		if [ -e "/tmp/tls" ]; then
+			find -L ${TLS_CERT} -type f -print0 | xargs -0 sha1sum > /tmp/tls.hash
 		fi
 	fi
 done
